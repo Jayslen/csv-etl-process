@@ -5,23 +5,24 @@ use std::{
 
 use crate::{
     config::{DatasetConfig, DatasetType, detect_dataset},
-    db::{connection, insert_countries_and_cities, insert_customers},
+    database::{connection, inserts},
     dim_values::DimensionStore,
-    parser::customers,
 };
 
-pub fn controller(header: &Vec<String>, reader: &mut BufReader<File>) -> Result<(), Error> {
-    let mut db = connection().unwrap();
+use super::customers::process_customers_csv;
+
+pub fn entry_point(header: &Vec<String>, reader: &mut BufReader<File>) -> Result<(), Error> {
+    let mut db = connection::connect().unwrap();
     let mut dims = DimensionStore::new();
 
     match detect_dataset(header) {
         DatasetType::Customers => {
             let config = DatasetConfig::customer_config();
 
-            let data = customers::process_customers_csv(reader, &config, &mut dims, header)?;
+            let data = process_customers_csv(reader, &config, &mut dims, header)?;
 
-            insert_countries_and_cities(&mut db, &dims).unwrap();
-            insert_customers(&mut db, &data).unwrap();
+            inserts::insert_countries_and_cities(&mut db, &dims).unwrap();
+            inserts::insert_customers(&mut db, &data).unwrap();
         }
 
         DatasetType::Orders => {

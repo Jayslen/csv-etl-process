@@ -1,34 +1,11 @@
-use crate::config::{DataType, DatasetConfig};
-use crate::dim_values::DimensionStore;
-use std::{collections::HashMap, io::Error};
+use std::collections::HashMap;
 
-#[derive(Debug)]
-pub enum Value {
-    Number(usize),
-    String(String),
-    Null,
-}
+use crate::{
+    config::{DataType, DatasetConfig, Value},
+    dim_values::DimensionStore,
+};
 
-pub fn string_to_vec(value: Result<String, Error>) -> Result<Vec<String>, Error> {
-    let v = value?;
-    let list = v
-        .split(',')
-        .map(|s| s.to_string().replace("\n", ""))
-        .collect();
-    Ok(list)
-}
-
-pub fn map_rows(header: &Vec<String>, row: &Vec<String>) -> HashMap<String, String> {
-    let mut map = HashMap::new();
-
-    for (h, v) in header.iter().zip(row.iter()) {
-        map.insert(h.clone(), v.clone());
-    }
-
-    map
-}
-
-pub fn parse_data(
+pub fn parse_values(
     map_row: &HashMap<String, String>,
     config: &DatasetConfig,
     header: &[String],

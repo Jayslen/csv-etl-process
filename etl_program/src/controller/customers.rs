@@ -1,9 +1,11 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error, ErrorKind};
 
-use crate::config::DatasetConfig;
+use crate::config::{DatasetConfig, Value};
 use crate::dim_values::DimensionStore;
-use crate::parser::utils::{Value, map_rows, parse_data, string_to_vec};
+use crate::parser::mapping::map_rows;
+use crate::parser::parse::parse_values;
+use crate::utils::string_to_vec;
 
 pub fn process_customers_csv(
     reader: &mut BufReader<File>,
@@ -26,7 +28,7 @@ pub fn process_customers_csv(
 
         let row_map = map_rows(&header, &arr);
 
-        let parsed = parse_data(&row_map, config, &header, dims);
+        let parsed = parse_values(&row_map, config, &header, dims);
 
         rows.push(parsed);
     }

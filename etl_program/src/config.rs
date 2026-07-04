@@ -16,6 +16,13 @@ pub enum DataType {
 }
 
 #[derive(Debug)]
+pub enum Value {
+    Number(usize),
+    String(String),
+    Null,
+}
+
+#[derive(Debug)]
 pub struct Cols {
     pub data_type: DataType,
     pub length: Option<usize>,

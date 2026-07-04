@@ -1,14 +1,5 @@
-use postgres::{Client, NoTls};
-
-use crate::{dim_values::DimensionStore, parser::utils::Value};
-
-pub fn connection() -> Result<Client, Box<dyn std::error::Error>> {
-    let client = Client::connect(
-        "host=localhost user=postgres password=postgres dbname=sales",
-        NoTls,
-    )?;
-    return Ok(client);
-}
+use crate::{config::Value, dim_values::DimensionStore};
+use postgres::Client;
 
 pub fn insert_countries_and_cities(
     client: &mut Client,
