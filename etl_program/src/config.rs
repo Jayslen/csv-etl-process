@@ -95,10 +95,3 @@ fn same_structure(header: &Vec<String>, dataset: &Vec<String>) -> bool {
     }
     return true;
 }
-
-#[derive(Default, Debug)]
-pub struct EtlStats {
-    pub processed: usize,
-    pub inserted: usize,
-    pub rejected: usize,
-}

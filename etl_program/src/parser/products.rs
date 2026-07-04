@@ -1,18 +1,18 @@
-use std::fs::File;
-
 use postgres::Client;
-use std::io::BufReader;
+use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io::{BufRead, BufReader, Seek, SeekFrom, Write};
+
+use crate::etl::EtlStats;
+use crate::validation::*;
 
 pub fn process_products_csv(
     client: &mut Client,
     reader: &mut BufReader<File>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use std::collections::{HashMap, HashSet};
-    use std::io::{BufRead, Seek, SeekFrom, Write};
-
+) -> Result<EtlStats, Box<dyn std::error::Error>> {
+    let mut stats = EtlStats::default();
     let mut categories_set = HashSet::new();
 
-    // First pass → collect unique categories
     for line in reader.lines() {
         let line = line?;
         if line.contains("ProductID") {
@@ -20,33 +20,30 @@ pub fn process_products_csv(
         }
 
         let cols: Vec<&str> = line.split(',').collect();
-        let category = cols[2].to_string();
 
-        categories_set.insert(category);
+        if validate_columns(&cols, 5).is_err() {
+            stats.rejected += 1;
+            continue;
+        }
+
+        categories_set.insert(cols[2].to_string());
     }
 
-    // Insert categories
     let mut writer =
         client.copy_in("COPY categories (category_name) FROM STDIN WITH (FORMAT csv)")?;
 
-    for category in &categories_set {
-        writer.write_all(format!("{}\n", category).as_bytes())?;
+    for c in &categories_set {
+        writer.write_all(format!("{}\n", c).as_bytes())?;
     }
-
     writer.finish()?;
 
-    // Build category_map
     let mut category_map = HashMap::new();
     for row in client.query("SELECT category_id, category_name FROM categories", &[])? {
-        let id: i32 = row.get(0);
-        let name: String = row.get(1);
-        category_map.insert(name, id);
+        category_map.insert(row.get::<_, String>(1), row.get::<_, i32>(0));
     }
 
-    // Reset reader
     reader.seek(SeekFrom::Start(0))?;
 
-    // Insert products
     let mut writer = client.copy_in(
         "COPY products (product_name, category_id, price, stock) FROM STDIN WITH (FORMAT csv)",
     )?;
@@ -57,21 +54,33 @@ pub fn process_products_csv(
             continue;
         }
 
+        stats.processed += 1;
+
         let cols: Vec<&str> = line.split(',').collect();
 
-        let product_name = cols[1];
-        let category = cols[2];
-        let price = cols[3];
-        let stock = cols[4];
+        if validate_columns(&cols, 5).is_err() {
+            stats.rejected += 1;
+            continue;
+        }
 
-        let category_id = category_map[category];
+        let category_id = match category_map.get(cols[2]) {
+            Some(v) => v,
+            None => {
+                stats.rejected += 1;
+                continue;
+            }
+        };
 
-        let row = format!("{},{},{},{}\n", product_name, category_id, price, stock);
+        let row = format!("{},{},{},{}\n", cols[1], category_id, cols[3], cols[4]);
 
-        writer.write_all(row.as_bytes())?;
+        if writer.write_all(row.as_bytes()).is_ok() {
+            stats.inserted += 1;
+        } else {
+            stats.rejected += 1;
+        }
     }
 
     writer.finish()?;
 
-    Ok(())
+    Ok(stats)
 }

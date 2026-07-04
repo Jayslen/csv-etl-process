@@ -1,5 +1,7 @@
 mod config;
+mod etl;
 mod parser;
+mod validation;
 
 use std::{
     env,
@@ -29,37 +31,40 @@ fn main() {
         .collect();
 
     let data_to_insert = csv_config.which_dataset(&header).unwrap();
-
     match data_to_insert {
-        Dataset::Customers => {
-            if let Err(e) = customers::process_csv(db, &mut reader) {
+        Dataset::Customers => match customers::process_customers_csv(db, &mut reader) {
+            Ok(stats) => stats.print_summary("Customers"),
+            Err(e) => {
                 eprintln!("Error processing CSV: {}", e);
                 if let Some(db_err) = e.downcast_ref::<postgres::Error>() {
                     eprintln!("DB ERROR: {:?}", db_err);
                 }
             }
-        }
-        Dataset::OrdersDetails => {
-            if let Err(e) = orders_details::process_order_details_csv(db, &mut reader) {
-                eprintln!("Error processing CSV: {}", e);
-                if let Some(db_err) = e.downcast_ref::<postgres::Error>() {
-                    eprintln!("DB ERROR: {:?}", db_err);
-                }
-            }
-        }
-        Dataset::Orders => {
-            if let Err(e) = orders::process_orders_csv(db, &mut reader) {
-                eprintln!("Error processing CSV: {}", e);
-            }
-        }
-        Dataset::Products => {
-            if let Err(e) = products::process_products_csv(db, &mut reader) {
-                eprintln!("Error processing CSV: {}", e);
-            }
-        }
-    }
+        },
 
-    // if let Err(e) = customers::process_csv(db, &mut reader) {
-    //     eprintln!("Error processing CSV: {}", e);
-    // }
+        Dataset::OrdersDetails => {
+            match orders_details::process_order_details_csv(db, &mut reader) {
+                Ok(stats) => stats.print_summary("Orders"),
+                Err(e) => {
+                    eprintln!("❌ Error processing CSV: {}", e);
+
+                    let mut source = e.source();
+                    while let Some(err) = source {
+                        eprintln!("➡️ Caused by: {}", err);
+                        source = err.source();
+                    }
+                }
+            }
+        }
+
+        Dataset::Orders => match orders::process_orders_csv(db, &mut reader) {
+            Ok(stats) => stats.print_summary("Orders"),
+            Err(e) => eprintln!("Error processing CSV: {}", e),
+        },
+
+        Dataset::Products => match products::process_products_csv(db, &mut reader) {
+            Ok(stats) => stats.print_summary("Products"),
+            Err(e) => eprintln!("Error processing CSV: {}", e),
+        },
+    }
 }
