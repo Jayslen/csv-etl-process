@@ -2,43 +2,37 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct DimensionStore {
-    pub countries: HashMap<String, usize>,
-    pub cities: HashMap<(String, String), usize>,
-    pub country_counter: usize,
-    pub city_counter: usize,
+    pub dims: HashMap<String, HashMap<String, usize>>,
+    pub counters: HashMap<String, usize>,
 }
 
 impl DimensionStore {
     pub fn new() -> Self {
         Self {
-            countries: HashMap::new(),
-            cities: HashMap::new(),
-            country_counter: 1,
-            city_counter: 1,
+            dims: HashMap::new(),
+            counters: HashMap::new(),
         }
     }
 
-    pub fn get_or_create_country(&mut self, name: &str) -> usize {
-        if let Some(id) = self.countries.get(name) {
+    pub fn get_or_create(&mut self, dim: &str, key: String) -> usize {
+        let map = self
+            .dims
+            .entry(dim.to_string())
+            .or_insert_with(HashMap::new);
+
+        let counter = self.counters.entry(dim.to_string()).or_insert(1);
+
+        if let Some(id) = map.get(&key) {
             *id
         } else {
-            let id = self.country_counter;
-            self.country_counter += 1;
-            self.countries.insert(name.to_string(), id);
+            let id = *counter;
+            *counter += 1;
+            map.insert(key, id);
             id
         }
     }
-    pub fn get_or_create_city(&mut self, city: &str, country: &str) -> usize {
-        let key = (city.to_string(), country.to_string());
 
-        if let Some(id) = self.cities.get(&key) {
-            *id
-        } else {
-            let id = self.city_counter;
-            self.city_counter += 1;
-
-            self.cities.insert(key, id);
-            id
-        }
+    pub fn get(&self, dim: &str) -> Option<&HashMap<String, usize>> {
+        self.dims.get(dim)
     }
 }

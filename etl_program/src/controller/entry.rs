@@ -4,12 +4,17 @@ use std::{
 };
 
 use crate::{
-    config::{DatasetConfig, DatasetType, detect_dataset},
-    database::{connection, inserts},
+    config::{DatasetConfig, DatasetType},
+    database::{
+        connection,
+        inserts::{self, insert_categories, insert_products},
+    },
     dim_values::DimensionStore,
+    utils::detect_dataset,
 };
 
 use super::customers::process_customers_csv;
+use super::products::process_products_csv;
 
 pub fn entry_point(header: &Vec<String>, reader: &mut BufReader<File>) -> Result<(), Error> {
     let mut db = connection::connect().unwrap();
@@ -34,7 +39,12 @@ pub fn entry_point(header: &Vec<String>, reader: &mut BufReader<File>) -> Result
         }
 
         DatasetType::Products => {
-            println!("Products dataset detected");
+            let config = DatasetConfig::products_config();
+
+            let data = process_products_csv(reader, &config, &mut dims, header)?;
+            println!("{:?}", data[0]);
+            insert_categories(&mut db, &dims).unwrap();
+            insert_products(&mut db, &data).unwrap();
         }
 
         DatasetType::Unknown => {

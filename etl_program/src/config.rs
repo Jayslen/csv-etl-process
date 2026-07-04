@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum DatasetType {
@@ -15,11 +15,37 @@ pub enum DataType {
     String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Value {
-    Number(usize),
+    Number(f64),
     String(String),
     Null,
+}
+
+impl Value {
+    pub fn as_i32(&self) -> i32 {
+        match self {
+            Value::Number(n) => *n as i32,
+            Value::String(s) => s.parse::<i32>().unwrap_or(0),
+            Value::Null => 0,
+        }
+    }
+
+    pub fn as_f64(&self) -> f64 {
+        match self {
+            Value::Number(n) => *n as f64,
+            Value::String(s) => s.parse::<f64>().unwrap_or(0.0),
+            Value::Null => 0.0,
+        }
+    }
+
+    pub fn as_string(&self) -> String {
+        match self {
+            Value::Number(n) => n.to_string(),
+            Value::String(s) => s.clone(),
+            Value::Null => String::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -103,6 +129,56 @@ impl DatasetConfig {
         DatasetConfig { cols: config }
     }
 
+    pub fn products_config() -> DatasetConfig {
+        let mut config = HashMap::new();
+
+        config.insert(
+            "ProductID".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "ProductName".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(100),
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "Category".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(50),
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "Price".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "Stock".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+                transformation: None,
+            },
+        );
+
+        DatasetConfig { cols: config }
+    }
     pub fn has_same_structure(&self, header: &Vec<String>) -> bool {
         let mut is_valid = true;
         if self.cols.len() != header.len() {
@@ -123,36 +199,4 @@ impl DatasetConfig {
 }
 fn remove_special_chars(value: &String) -> String {
     value.chars().filter(|c| c.is_ascii_digit()).collect()
-}
-
-pub fn detect_dataset(header: &Vec<String>) -> DatasetType {
-    let header_set: HashSet<&str> = header.iter().map(|s| s.as_str()).collect();
-
-    let customers = HashSet::from([
-        "CustomerID",
-        "FirstName",
-        "LastName",
-        "Email",
-        "Phone",
-        "City",
-        "Country",
-    ]);
-
-    let order_items = HashSet::from(["OrderID", "ProductID", "Quantity", "TotalPrice"]);
-
-    let orders = HashSet::from(["OrderID", "CustomerID", "OrderDate", "Status"]);
-
-    let products = HashSet::from(["ProductID", "ProductName", "Category", "Price", "Stock"]);
-
-    if header_set == customers {
-        DatasetType::Customers
-    } else if header_set == order_items {
-        DatasetType::OrderItems
-    } else if header_set == orders {
-        DatasetType::Orders
-    } else if header_set == products {
-        DatasetType::Products
-    } else {
-        DatasetType::Unknown
-    }
 }
