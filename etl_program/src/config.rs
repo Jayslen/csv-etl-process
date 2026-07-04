@@ -1,97 +1,98 @@
-use postgres::{Client, NoTls};
 use std::collections::HashMap;
 
-pub fn connection() -> Result<Client, Box<dyn std::error::Error>> {
-    let client = Client::connect(
-        "host=localhost user=postgres password=postgres dbname=sales",
-        NoTls,
-    )?;
-    return Ok(client);
+#[derive(Debug)]
+pub enum DataType {
+    Number,
+    String,
 }
 
-pub struct ConfigData {
-    datasets: HashMap<String, Vec<String>>,
+#[derive(Debug)]
+pub struct Cols {
+    pub data_type: DataType,
+    pub length: Option<u8>,
 }
 
-pub enum Dataset {
-    Customers,
-    OrdersDetails,
-    Orders,
-    Products,
+pub struct DatasetConfig {
+    pub cols: HashMap<String, Cols>,
 }
 
-impl ConfigData {
-    pub fn init() -> ConfigData {
-        let mut data = ConfigData {
-            datasets: HashMap::new(),
-        };
-        data.datasets.insert(
-            "customers".to_string(),
-            vec![
-                "CustomerID".to_string(),
-                "FirstName".to_string(),
-                "LastName".to_string(),
-                "Email".to_string(),
-                "Phone".to_string(),
-                "City".to_string(),
-                "Country".to_string(),
-            ],
+impl DatasetConfig {
+    pub fn customer_config() -> DatasetConfig {
+        let mut config = HashMap::new();
+
+        config.insert(
+            "CustomerID".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+            },
         );
-        data.datasets.insert(
-            "orders_details".to_string(),
-            vec![
-                "OrderID".to_string(),
-                "ProductID".to_string(),
-                "Quantity".to_string(),
-                "TotalPrice".to_string(),
-            ],
+
+        config.insert(
+            "FirstName".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(50),
+            },
         );
-        data.datasets.insert(
-            "orders".to_string(),
-            vec![
-                "OrderID".to_string(),
-                "CustomerID".to_string(),
-                "OrderDate".to_string(),
-                "Status".to_string(),
-            ],
+
+        config.insert(
+            "LastName".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(50),
+            },
         );
-        data.datasets.insert(
-            "products".to_string(),
-            vec![
-                "ProductID".to_string(),
-                "ProductName".to_string(),
-                "Category".to_string(),
-                "Price".to_string(),
-                "Stock".to_string(),
-            ],
+
+        config.insert(
+            "Email".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(100),
+            },
         );
-        return data;
+
+        config.insert(
+            "Phone".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(30),
+            },
+        );
+
+        config.insert(
+            "City".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(50),
+            },
+        );
+
+        config.insert(
+            "Country".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(50),
+            },
+        );
+
+        DatasetConfig { cols: config }
     }
+    pub fn has_same_structure(&self, header: &Vec<String>) -> bool {
+        let mut is_valid = true;
+        if self.cols.len() != header.len() {
+            is_valid = false
+        }
 
-    pub fn which_dataset(&self, header: &Vec<String>) -> Option<Dataset> {
-        for (key, value) in self.datasets.iter() {
-            if same_structure(header, value) {
-                return Some(match key.as_str() {
-                    "customers" => Dataset::Customers,
-                    "orders_details" => Dataset::OrdersDetails,
-                    "orders" => Dataset::Orders,
-                    "products" => Dataset::Products,
-                    _ => continue,
-                });
+        for col in header {
+            let has_col = self.cols.get(col);
+
+            if has_col.is_none() {
+                is_valid = false;
+                break;
             }
         }
-        None
-    }
-}
 
-fn same_structure(header: &Vec<String>, dataset: &Vec<String>) -> bool {
-    if header.len() != dataset.len() {
-        return false;
+        is_valid
     }
-    for (h, d) in header.iter().zip(dataset.iter()) {
-        if h != d {
-            return false;
-        }
-    }
-    return true;
 }
