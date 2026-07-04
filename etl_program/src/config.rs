@@ -1,4 +1,13 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+#[derive(Debug)]
+pub enum DatasetType {
+    Customers,
+    OrderItems,
+    Orders,
+    Products,
+    Unknown,
+}
 
 #[derive(Debug)]
 pub enum DataType {
@@ -107,4 +116,36 @@ impl DatasetConfig {
 }
 fn remove_special_chars(value: &String) -> String {
     value.chars().filter(|c| c.is_ascii_digit()).collect()
+}
+
+pub fn detect_dataset(header: &Vec<String>) -> DatasetType {
+    let header_set: HashSet<&str> = header.iter().map(|s| s.as_str()).collect();
+
+    let customers = HashSet::from([
+        "CustomerID",
+        "FirstName",
+        "LastName",
+        "Email",
+        "Phone",
+        "City",
+        "Country",
+    ]);
+
+    let order_items = HashSet::from(["OrderID", "ProductID", "Quantity", "TotalPrice"]);
+
+    let orders = HashSet::from(["OrderID", "CustomerID", "OrderDate", "Status"]);
+
+    let products = HashSet::from(["ProductID", "ProductName", "Category", "Price", "Stock"]);
+
+    if header_set == customers {
+        DatasetType::Customers
+    } else if header_set == order_items {
+        DatasetType::OrderItems
+    } else if header_set == orders {
+        DatasetType::Orders
+    } else if header_set == products {
+        DatasetType::Products
+    } else {
+        DatasetType::Unknown
+    }
 }

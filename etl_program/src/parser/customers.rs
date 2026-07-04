@@ -9,11 +9,8 @@ pub fn process_customers_csv(
     reader: &mut BufReader<File>,
     config: &DatasetConfig,
     dims: &mut DimensionStore,
+    header: &Vec<String>,
 ) -> Result<Vec<Vec<Value>>, Error> {
-    let raw_header = reader.lines().next().expect("Error while reading header")?;
-
-    let header = string_to_vec(Ok(raw_header))?;
-
     if !config.has_same_structure(&header) {
         return Err(Error::new(
             ErrorKind::InvalidData,
