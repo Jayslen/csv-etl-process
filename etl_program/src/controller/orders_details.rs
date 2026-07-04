@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    config::{DatasetConfig, Value},
+    config::{DatasetConfig, EtlStats, Value},
     dim_values::DimensionStore,
     parser::{mapping::map_rows, parse::parse_values},
     utils::string_to_vec,
@@ -15,6 +15,7 @@ pub fn process_order_items_csv(
     config: &DatasetConfig,
     dims: &mut DimensionStore,
     header: &Vec<String>,
+    stats: &mut EtlStats,
 ) -> Result<Vec<Vec<Value>>, Error> {
     if !config.has_same_structure(header) {
         return Err(Error::new(
@@ -31,7 +32,7 @@ pub fn process_order_items_csv(
 
         let row_map = map_rows(header, &arr);
 
-        let parsed = parse_values(&row_map, config, header, dims);
+        let parsed = parse_values(&row_map, config, header, dims, stats);
 
         rows.push(parsed);
     }

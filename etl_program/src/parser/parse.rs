@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    config::{DataType, DatasetConfig, Value},
+    config::{DataType, DatasetConfig, EtlStats, Value},
     dim_values::DimensionStore,
 };
 
@@ -10,6 +10,7 @@ pub fn parse_values(
     config: &DatasetConfig,
     header: &[String],
     dims: &mut DimensionStore,
+    stats: &mut EtlStats,
 ) -> Vec<Value> {
     let mut parsed_row = Vec::new();
 
@@ -79,7 +80,10 @@ pub fn parse_values(
 
                     match cleaned.parse::<f64>() {
                         Ok(num) => Value::Number(num),
-                        Err(_) => Value::Null,
+                        Err(_) => {
+                            stats.nulls += 1;
+                            Value::Null
+                        }
                     }
                 }
                 DataType::String => {
@@ -87,6 +91,7 @@ pub fn parse_values(
                         if v.len() <= max {
                             Value::String(v)
                         } else {
+                            stats.nulls += 1;
                             Value::Null
                         }
                     } else {
@@ -95,7 +100,10 @@ pub fn parse_values(
                 }
             },
 
-            _ => Value::Null,
+            _ => {
+                stats.nulls += 1;
+                Value::Null
+            }
         };
 
         parsed_row.push(final_value);

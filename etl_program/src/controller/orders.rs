@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error, ErrorKind};
 
-use crate::config::{DatasetConfig, Value};
+use crate::config::{DatasetConfig, EtlStats, Value};
 use crate::dim_values::DimensionStore;
 use crate::parser::mapping::map_rows;
 use crate::parser::parse::parse_values;
@@ -12,6 +12,7 @@ pub fn process_orders_csv(
     config: &DatasetConfig,
     dims: &mut DimensionStore,
     header: &Vec<String>,
+    stats: &mut EtlStats,
 ) -> Result<Vec<Vec<Value>>, Error> {
     if !config.has_same_structure(header) {
         return Err(Error::new(
@@ -28,7 +29,7 @@ pub fn process_orders_csv(
 
         let row_map = map_rows(header, &arr);
 
-        let parsed = parse_values(&row_map, config, header, dims);
+        let parsed = parse_values(&row_map, config, header, dims, stats);
 
         rows.push(parsed);
     }

@@ -22,6 +22,15 @@ pub enum Value {
     Null,
 }
 
+#[derive(Default, Debug)]
+pub struct EtlStats {
+    pub processed: usize,
+    pub inserted: usize,
+    pub skipped: usize,
+    pub nulls: usize,
+    pub errors: usize,
+}
+
 impl Value {
     pub fn as_f64(&self) -> f64 {
         match self {
