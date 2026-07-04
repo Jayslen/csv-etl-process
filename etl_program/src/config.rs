@@ -9,7 +9,8 @@ pub enum DataType {
 #[derive(Debug)]
 pub struct Cols {
     pub data_type: DataType,
-    pub length: Option<u8>,
+    pub length: Option<usize>,
+    pub transformation: Option<fn(&String) -> String>,
 }
 
 pub struct DatasetConfig {
@@ -25,6 +26,7 @@ impl DatasetConfig {
             Cols {
                 data_type: DataType::Number,
                 length: None,
+                transformation: None,
             },
         );
 
@@ -33,6 +35,7 @@ impl DatasetConfig {
             Cols {
                 data_type: DataType::String,
                 length: Some(50),
+                transformation: None,
             },
         );
 
@@ -41,6 +44,7 @@ impl DatasetConfig {
             Cols {
                 data_type: DataType::String,
                 length: Some(50),
+                transformation: None,
             },
         );
 
@@ -49,6 +53,7 @@ impl DatasetConfig {
             Cols {
                 data_type: DataType::String,
                 length: Some(100),
+                transformation: None,
             },
         );
 
@@ -56,7 +61,8 @@ impl DatasetConfig {
             "Phone".to_string(),
             Cols {
                 data_type: DataType::String,
-                length: Some(30),
+                length: Some(10),
+                transformation: Some(remove_special_chars),
             },
         );
 
@@ -65,6 +71,7 @@ impl DatasetConfig {
             Cols {
                 data_type: DataType::String,
                 length: Some(50),
+                transformation: None,
             },
         );
 
@@ -73,11 +80,13 @@ impl DatasetConfig {
             Cols {
                 data_type: DataType::String,
                 length: Some(50),
+                transformation: None,
             },
         );
 
         DatasetConfig { cols: config }
     }
+
     pub fn has_same_structure(&self, header: &Vec<String>) -> bool {
         let mut is_valid = true;
         if self.cols.len() != header.len() {
@@ -95,4 +104,7 @@ impl DatasetConfig {
 
         is_valid
     }
+}
+fn remove_special_chars(value: &String) -> String {
+    value.chars().filter(|c| c.is_ascii_digit()).collect()
 }
