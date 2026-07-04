@@ -5,9 +5,13 @@ use std::{
 
 use crate::{
     config::{DatasetConfig, DatasetType},
+    controller::{orders, orders_details},
     database::{
         connection,
-        inserts::{self, insert_categories, insert_products},
+        inserts::{
+            self, insert_categories, insert_order_items, insert_orders, insert_products,
+            insert_status,
+        },
     },
     dim_values::DimensionStore,
     utils::detect_dataset,
@@ -31,11 +35,24 @@ pub fn entry_point(header: &Vec<String>, reader: &mut BufReader<File>) -> Result
         }
 
         DatasetType::Orders => {
-            println!("Orders dataset detected");
+            let config = DatasetConfig::orders_config();
+
+            let data = orders::process_orders_csv(reader, &config, &mut dims, header)?;
+
+            println!("{:?}", data[0]);
+
+            println!("{:?}", dims.get("Status"));
+
+            insert_status(&mut db, &dims);
+            insert_orders(&mut db, &data);
         }
 
         DatasetType::OrderItems => {
-            println!("OrderItems dataset detected");
+            let config = DatasetConfig::order_items_config();
+
+            let data = orders_details::process_order_items_csv(reader, &config, &mut dims, header)?;
+
+            insert_order_items(&mut db, &data);
         }
 
         DatasetType::Products => {

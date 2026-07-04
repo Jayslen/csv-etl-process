@@ -23,14 +23,6 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_i32(&self) -> i32 {
-        match self {
-            Value::Number(n) => *n as i32,
-            Value::String(s) => s.parse::<i32>().unwrap_or(0),
-            Value::Null => 0,
-        }
-    }
-
     pub fn as_f64(&self) -> f64 {
         match self {
             Value::Number(n) => *n as f64,
@@ -170,6 +162,89 @@ impl DatasetConfig {
 
         config.insert(
             "Stock".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+                transformation: None,
+            },
+        );
+
+        DatasetConfig { cols: config }
+    }
+    pub fn orders_config() -> DatasetConfig {
+        let mut config = HashMap::new();
+
+        config.insert(
+            "OrderID".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "CustomerID".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "OrderDate".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(20),
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "Status".to_string(),
+            Cols {
+                data_type: DataType::String,
+                length: Some(20),
+                transformation: None,
+            },
+        );
+
+        DatasetConfig { cols: config }
+    }
+
+    pub fn order_items_config() -> DatasetConfig {
+        let mut config = HashMap::new();
+
+        config.insert(
+            "OrderID".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "ProductID".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "Quantity".to_string(),
+            Cols {
+                data_type: DataType::Number,
+                length: None,
+                transformation: None,
+            },
+        );
+
+        config.insert(
+            "TotalPrice".to_string(),
             Cols {
                 data_type: DataType::Number,
                 length: None,

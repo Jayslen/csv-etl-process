@@ -1,5 +1,7 @@
 use crate::config::Value;
+use crate::database::preload::{load_customer_ids, load_orders, load_products};
 use crate::dim_values::DimensionStore;
+use chrono::NaiveDate;
 use postgres::Client;
 use std::error::Error;
 
@@ -159,6 +161,125 @@ pub fn insert_categories(
              ON CONFLICT (category_name) DO NOTHING",
             &[&(*id as i32), name],
         )?;
+    }
+
+    Ok(())
+}
+
+pub fn insert_status(client: &mut Client, dims: &DimensionStore) -> Result<(), Box<dyn Error>> {
+    let status_map = match dims.get("status") {
+        Some(s) => s,
+        None => return Ok(()),
+    };
+
+    for (name, id) in status_map {
+        client.execute(
+            "INSERT INTO status (status_id, status_name)
+             VALUES ($1, $2)
+             ON CONFLICT (status_name) DO NOTHING",
+            &[&(*id as i32), name],
+        )?;
+    }
+
+    Ok(())
+}
+
+pub fn insert_orders(client: &mut Client, data: &Vec<Vec<Value>>) -> Result<(), Box<dyn Error>> {
+    let customer_ids = load_customer_ids(client)?;
+    for row in data {
+        let order_id = match row.get(0) {
+            Some(Value::Number(n)) => *n as i32,
+            _ => continue,
+        };
+
+        let customer_id = match row.get(1) {
+            Some(Value::Number(n)) => *n as i32,
+            _ => continue,
+        };
+
+        let order_date = match row.get(2) {
+            Some(v) => {
+                let s = v.as_string();
+                match NaiveDate::parse_from_str(&s, "%Y-%m-%d") {
+                    Ok(d) => d,
+                    Err(_) => continue,
+                }
+            }
+            None => continue,
+        };
+
+        let status_id = match row.get(3) {
+            Some(Value::Number(n)) => *n as i32,
+            _ => continue,
+        };
+
+        // 🔥 FAST VALIDATION (O(1))
+        if !customer_ids.contains(&customer_id) {
+            continue;
+        }
+
+        let result = client.execute(
+            "INSERT INTO orders
+             (order_id, customer_id, order_date, status_id)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (order_id) DO NOTHING",
+            &[&order_id, &customer_id, &order_date, &status_id],
+        );
+        if let Err(e) = result {
+            println!("DB INSERT ERROR: {:?}", e);
+        }
+    }
+
+    Ok(())
+}
+
+pub fn insert_order_items(
+    client: &mut Client,
+    data: &Vec<Vec<Value>>,
+) -> Result<(), Box<dyn Error>> {
+    let orders = load_orders(client)?;
+    let products = load_products(client)?;
+
+    for row in data {
+        let order_id = match row.get(0) {
+            Some(Value::Number(n)) => *n as i32,
+            _ => continue,
+        };
+
+        let product_id = match row.get(1) {
+            Some(Value::Number(n)) => *n as i32,
+            _ => continue,
+        };
+
+        let quantity = match row.get(2) {
+            Some(Value::Number(n)) => *n as i32,
+            _ => 0,
+        };
+
+        let total_price = match row.get(3) {
+            Some(Value::Number(n)) => *n,
+            _ => 0.0,
+        };
+
+        if !orders.contains(&order_id) {
+            continue;
+        }
+
+        if !products.contains(&product_id) {
+            continue;
+        }
+
+        let result = client.execute(
+            "INSERT INTO order_details
+             (order_id, product_id, quantity, total)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT DO NOTHING",
+            &[&order_id, &product_id, &quantity, &total_price],
+        );
+
+        if let Err(e) = result {
+            println!("DB INSERT ERROR: {:?}", e);
+        }
     }
 
     Ok(())

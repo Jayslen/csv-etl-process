@@ -50,6 +50,16 @@ pub fn parse_values(
             parsed_row.push(Value::Number(id as f64));
             continue;
         }
+
+        if col_name == "Status" {
+            let id = raw_value
+                .map(|v| dims.get_or_create("status", v.clone()))
+                .unwrap_or(0);
+
+            parsed_row.push(Value::Number(id as f64));
+            continue;
+        }
+
         let transformed = match (raw_value, col_config) {
             (Some(value), Some(cfg)) => {
                 let value = match cfg.transformation {
