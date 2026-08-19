@@ -153,14 +153,35 @@ pub fn insert_products(
             }
         };
 
-        let category_id: i32 = match client.query_one(
-            "INSERT INTO categories (category_name)
-             VALUES ($1)
-             ON CONFLICT (category_name) DO UPDATE SET category_name = EXCLUDED.category_name
-             RETURNING category_id",
+        let category_id: i32 = match client.query_opt(
+            "SELECT category_id FROM categories WHERE category_name = $1 LIMIT 1",
             &[&category_name],
         ) {
-            Ok(row) => row.get(0),
+            Ok(Some(row)) => row.get(0),
+            Ok(None) => {
+                let next_id: i32 = match client.query_one(
+                    "SELECT COALESCE(MAX(category_id), 0) + 1 FROM categories",
+                    &[],
+                ) {
+                    Ok(row) => row.get(0),
+                    Err(_) => {
+                        stats.errors += 1;
+                        continue;
+                    }
+                };
+
+                match client.execute(
+                    "INSERT INTO categories (category_id, category_name)
+                     VALUES ($1, $2)",
+                    &[&next_id, &category_name],
+                ) {
+                    Ok(_) => next_id,
+                    Err(_) => {
+                        stats.errors += 1;
+                        continue;
+                    }
+                }
+            }
             Err(_) => {
                 stats.errors += 1;
                 continue;
