@@ -26,7 +26,6 @@ pub fn process_products_csv(
     for line in reader.lines() {
         let line = line?;
         let arr = string_to_vec(Ok(line))?;
-
         let row_map = map_rows(&header, &arr);
 
         let parsed = parse_values(&row_map, config, &header, dims, stats);

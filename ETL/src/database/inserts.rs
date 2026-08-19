@@ -145,10 +145,24 @@ pub fn insert_products(
             }
         };
 
-        let category_id = match row.get(2) {
-            Some(Value::Number(id)) => *id as i32,
+        let category_name = match row.get(2) {
+            Some(Value::String(name)) if !name.is_empty() => name.clone(),
             _ => {
                 stats.skipped += 1;
+                continue;
+            }
+        };
+
+        let category_id: i32 = match client.query_one(
+            "INSERT INTO categories (category_name)
+             VALUES ($1)
+             ON CONFLICT (category_name) DO UPDATE SET category_name = EXCLUDED.category_name
+             RETURNING category_id",
+            &[&category_name],
+        ) {
+            Ok(row) => row.get(0),
+            Err(_) => {
+                stats.errors += 1;
                 continue;
             }
         };
@@ -172,13 +186,18 @@ pub fn insert_products(
         let result = client.execute(
             "INSERT INTO products
                    (product_id, product_name, category_id, price, stock)
-                   VALUES ($1, $2, $3, $4, $5)",
+                   VALUES ($1, $2, $3, $4, $5)
+                   ON CONFLICT (product_id) DO UPDATE
+                   SET product_name = EXCLUDED.product_name,
+                       category_id = EXCLUDED.category_id,
+                       price = EXCLUDED.price,
+                       stock = EXCLUDED.stock",
             &[&product_id, &product_name, &category_id, &price, &stock],
         );
 
         match result {
             Ok(_) => stats.inserted += 1,
-            Err(_) => stats.skipped += 1,
+            Err(_) => stats.errors += 1,
         }
     }
 

@@ -62,7 +62,8 @@ pub fn entry_point(header: &Vec<String>, reader: &mut BufReader<File>) -> Result
             let config = DatasetConfig::products_config();
             let mut stats = EtlStats::default();
             let data = process_products_csv(reader, &config, &mut dims, header, &mut stats)?;
-
+            //println!("{:?}", data);
+            //println!("{:?}", stats);
             insert_categories(&mut db, &dims).unwrap();
             insert_products(&mut db, &data, &mut stats).unwrap();
 

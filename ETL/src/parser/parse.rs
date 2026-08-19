@@ -44,11 +44,8 @@ pub fn parse_values(
         }
 
         if col_name == "Category" {
-            let id = raw_value
-                .map(|v| dims.get_or_create("categories", v.clone()))
-                .unwrap_or(0);
-
-            parsed_row.push(Value::Number(id as f64));
+            let category = raw_value.cloned().unwrap_or_default();
+            parsed_row.push(Value::String(category));
             continue;
         }
 
